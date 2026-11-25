@@ -22,7 +22,7 @@ export default function App() {
   }, [visited, toggleCountry])
 
   const handleExportPDF = useCallback(async () => {
-    const svg = document.querySelector('svg') as SVGSVGElement | null
+    const svg = document.getElementById('world-map-svg') as SVGSVGElement | null
     if (!svg) return
     await exportMapPDF(svg, visited)
   }, [visited])

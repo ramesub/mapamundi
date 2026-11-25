@@ -229,6 +229,7 @@ export default function WorldMap({ visited, onCountryClick }: WorldMapProps) {
     <>
       <svg
         ref={svgRef}
+        id="world-map-svg"
         style={{
           width: '100vw',
           height: '100vh',
