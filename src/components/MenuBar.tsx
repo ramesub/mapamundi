@@ -61,6 +61,8 @@ export default function MenuBar({ visited, onToggleCountry, onRemoveCountry, onE
             style={styles.input}
             placeholder="Añadir país visitado…"
             value={query}
+            autoComplete="off"
+            spellCheck={false}
             onChange={e => { setQuery(e.target.value); setOpen(true) }}
             onFocus={() => query && setOpen(true)}
           />
