@@ -1,45 +1,59 @@
 import jsPDF from 'jspdf'
-import html2canvas from 'html2canvas'
 import countriesEs from '../data/countries-es.json'
 
 const TOTAL_COUNTRIES = 195
+
+async function svgToCanvas(svgElement: SVGSVGElement, scale: number): Promise<HTMLCanvasElement> {
+  const width = svgElement.clientWidth || window.innerWidth
+  const height = svgElement.clientHeight || window.innerHeight
+
+  const svgData = new XMLSerializer().serializeToString(svgElement)
+  const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' })
+  const url = URL.createObjectURL(svgBlob)
+
+  const img = new Image()
+  await new Promise<void>((resolve, reject) => {
+    img.onload = () => resolve()
+    img.onerror = reject
+    img.src = url
+  })
+
+  const canvas = document.createElement('canvas')
+  canvas.width = width * scale
+  canvas.height = height * scale
+  const ctx = canvas.getContext('2d')!
+  ctx.fillStyle = '#1a2744'
+  ctx.fillRect(0, 0, canvas.width, canvas.height)
+  ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+  URL.revokeObjectURL(url)
+
+  return canvas
+}
 
 export async function exportMapPDF(
   svgElement: SVGSVGElement,
   visited: Set<string>
 ): Promise<void> {
-  // Capturar el SVG como imagen de alta resolución
-  const canvas = await html2canvas(svgElement as unknown as HTMLElement, {
-    scale: 2,
-    useCORS: true,
-    backgroundColor: '#1a2744',
-    width: svgElement.clientWidth,
-    height: svgElement.clientHeight,
-  })
-
+  const canvas = await svgToCanvas(svgElement, 2)
   const imgData = canvas.toDataURL('image/png', 1.0)
 
-  // Crear PDF A4 horizontal
   const pdf = new jsPDF({
     orientation: 'landscape',
     unit: 'mm',
     format: 'a4',
   })
 
-  const pageW = pdf.internal.pageSize.getWidth()   // 297mm
-  const pageH = pdf.internal.pageSize.getHeight()  // 210mm
+  const pageW = pdf.internal.pageSize.getWidth()
+  const pageH = pdf.internal.pageSize.getHeight()
 
-  // Fondo oscuro
   pdf.setFillColor(26, 39, 68)
   pdf.rect(0, 0, pageW, pageH, 'F')
 
-  // --- Cabecera ---
   pdf.setTextColor(255, 255, 255)
   pdf.setFont('helvetica', 'bold')
   pdf.setFontSize(20)
   pdf.text('Mapamundi en Moto', pageW / 2, 14, { align: 'center' })
 
-  // Fecha
   const now = new Date()
   const dateStr = now.toLocaleDateString('es-ES', {
     day: 'numeric',
@@ -51,7 +65,6 @@ export async function exportMapPDF(
   pdf.setTextColor(180, 180, 180)
   pdf.text(dateStr, pageW / 2, 20, { align: 'center' })
 
-  // Contador
   const pct = ((visited.size / TOTAL_COUNTRIES) * 100).toFixed(1)
   pdf.setFont('helvetica', 'bold')
   pdf.setFontSize(10)
@@ -63,7 +76,6 @@ export async function exportMapPDF(
     { align: 'center' }
   )
 
-  // --- Mapa ---
   const mapY = 30
   const mapH = pageH - mapY - 10
   const mapW = Math.min(pageW - 20, (mapH * canvas.width) / canvas.height)
@@ -71,14 +83,12 @@ export async function exportMapPDF(
 
   pdf.addImage(imgData, 'PNG', mapX, mapY, mapW, mapH)
 
-  // Borde del mapa
   pdf.setDrawColor(255, 255, 255)
   pdf.setLineWidth(0.2)
   pdf.setGState(pdf.GState({ opacity: 0.2 }))
   pdf.rect(mapX, mapY, mapW, mapH)
   pdf.setGState(pdf.GState({ opacity: 1 }))
 
-  // --- Lista de países visitados en página 2 (si hay alguno) ---
   if (visited.size > 0) {
     pdf.addPage('a4', 'landscape')
     pdf.setFillColor(26, 39, 68)
@@ -98,7 +108,6 @@ export async function exportMapPDF(
       .map(iso => (countriesEs as Record<string, string>)[iso] ?? iso)
       .sort((a, b) => a.localeCompare(b, 'es'))
 
-    // 3 columnas
     const cols = 3
     const colW = (pageW - 40) / cols
     const lineH = 7
@@ -114,7 +123,6 @@ export async function exportMapPDF(
       const y = startY + row * lineH
 
       if (y < pageH - 15) {
-        // Punto decorativo arena
         pdf.setFillColor(212, 169, 106)
         pdf.circle(x + 1.5, y - 1, 1, 'F')
         pdf.setTextColor(220, 220, 220)
@@ -122,7 +130,6 @@ export async function exportMapPDF(
       }
     })
 
-    // Pie de página
     pdf.setFontSize(8)
     pdf.setTextColor(100, 100, 100)
     pdf.text(`Generado el ${dateStr} · Mapamundi en Moto`, pageW / 2, pageH - 6, { align: 'center' })
