@@ -22,11 +22,12 @@ const COLORS = {
 }
 
 type CountryFeature = GeoJSON.Feature<GeoJSON.MultiPolygon | GeoJSON.Polygon, { name: string }>
+type SphereObject = { type: 'Sphere' }
 
 export default function WorldMap({ visited, onCountryClick }: WorldMapProps) {
   const svgRef = useRef<SVGSVGElement>(null)
   const tooltipRef = useRef<HTMLDivElement>(null)
-  const [hoveredIso, setHoveredIso] = useState<string | null>(null)
+  const [, setHoveredIso] = useState<string | null>(null)
   const [topoData, setTopoData] = useState<CountryFeature[] | null>(null)
   const projectionRef = useRef<d3.GeoProjection | null>(null)
   const pathRef = useRef<d3.GeoPath | null>(null)
@@ -55,7 +56,7 @@ export default function WorldMap({ visited, onCountryClick }: WorldMapProps) {
     svg.selectAll('*').remove()
 
     const projection = d3.geoNaturalEarth1()
-      .fitSize([width, height], { type: 'Sphere' } as GeoJSON.GeoJsonObject)
+      .fitSize([width, height], { type: 'Sphere' } as unknown as SphereObject)
     projectionRef.current = projection
 
     const path = d3.geoPath(projection)
@@ -63,7 +64,7 @@ export default function WorldMap({ visited, onCountryClick }: WorldMapProps) {
 
     // Fondo océano
     svg.append('path')
-      .datum({ type: 'Sphere' } as GeoJSON.GeoJsonObject)
+      .datum({ type: 'Sphere' } as unknown as SphereObject)
       .attr('d', path as unknown as string)
       .attr('fill', COLORS.ocean)
 
@@ -201,7 +202,7 @@ export default function WorldMap({ visited, onCountryClick }: WorldMapProps) {
 
     // Borde del globo
     svg.append('path')
-      .datum({ type: 'Sphere' } as GeoJSON.GeoJsonObject)
+      .datum({ type: 'Sphere' } as unknown as SphereObject)
       .attr('d', path as unknown as string)
       .attr('fill', 'none')
       .attr('stroke', 'rgba(255,255,255,0.15)')
@@ -216,9 +217,9 @@ export default function WorldMap({ visited, onCountryClick }: WorldMapProps) {
       const svg = d3.select(svgRef.current)
       const width = svgRef.current.clientWidth
       const height = svgRef.current.clientHeight
-      const projection = d3.geoNaturalEarth1().fitSize([width, height], { type: 'Sphere' } as GeoJSON.GeoJsonObject)
+      const projection = d3.geoNaturalEarth1().fitSize([width, height], { type: 'Sphere' } as unknown as SphereObject)
       const path = d3.geoPath(projection)
-      svg.selectAll('path').attr('d', (d) => path(d as GeoJSON.GeoJsonObject) ?? '')
+      svg.selectAll('path').attr('d', (d) => path(d as GeoJSON.Feature) ?? '')
     }
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)

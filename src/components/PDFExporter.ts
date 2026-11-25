@@ -9,7 +9,7 @@ export async function exportMapPDF(
   visited: Set<string>
 ): Promise<void> {
   // Capturar el SVG como imagen de alta resolución
-  const canvas = await html2canvas(svgElement, {
+  const canvas = await html2canvas(svgElement as unknown as HTMLElement, {
     scale: 2,
     useCORS: true,
     backgroundColor: '#1a2744',

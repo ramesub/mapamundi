@@ -1,4 +1,4 @@
-import { useRef, useCallback } from 'react'
+import { useCallback } from 'react'
 import WorldMap from './components/WorldMap'
 import MenuBar from './components/MenuBar'
 import { exportMapPDF } from './components/PDFExporter'
@@ -7,7 +7,6 @@ import './App.css'
 
 export default function App() {
   const { visited, toggleCountry, removeCountry } = useVisitedCountries()
-  const svgRef = useRef<SVGSVGElement>(null)
 
   const handleCountryClick = useCallback((isoNum: string, name: string) => {
     toggleCountry(isoNum)
