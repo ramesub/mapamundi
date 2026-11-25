@@ -3,9 +3,11 @@ import WorldMap from './components/WorldMap'
 import MenuBar from './components/MenuBar'
 import { exportMapPDF } from './components/PDFExporter'
 import { useVisitedCountries } from './hooks/useVisitedCountries'
+import { useDOMProtection } from './hooks/useDOMProtection'
 import './App.css'
 
 export default function App() {
+  useDOMProtection()
   const { visited, toggleCountry, removeCountry } = useVisitedCountries()
 
   const handleCountryClick = useCallback((isoNum: string, name: string) => {

@@ -7,8 +7,20 @@ async function svgToCanvas(svgElement: SVGSVGElement, scale: number): Promise<HT
   const width = svgElement.clientWidth || window.innerWidth
   const height = svgElement.clientHeight || window.innerHeight
 
-  const svgData = new XMLSerializer().serializeToString(svgElement)
-  const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' })
+  // Clone and set explicit dimensions so the browser renders at full size
+  // when the SVG is loaded as a standalone image (no CSS context)
+  const clone = svgElement.cloneNode(true) as SVGSVGElement
+  clone.setAttribute('width', String(width))
+  clone.setAttribute('height', String(height))
+  if (!clone.getAttribute('viewBox')) {
+    clone.setAttribute('viewBox', `0 0 ${width} ${height}`)
+  }
+  if (!clone.getAttribute('xmlns')) {
+    clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg')
+  }
+
+  const svgStr = new XMLSerializer().serializeToString(clone)
+  const svgBlob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' })
   const url = URL.createObjectURL(svgBlob)
 
   const img = new Image()
@@ -77,16 +89,27 @@ export async function exportMapPDF(
   )
 
   const mapY = 30
-  const mapH = pageH - mapY - 10
-  const mapW = Math.min(pageW - 20, (mapH * canvas.width) / canvas.height)
+  const availW = pageW - 20
+  const availH = pageH - mapY - 10
+  const imgAspect = canvas.width / canvas.height
+  const boxAspect = availW / availH
+  let mapW: number, mapH: number
+  if (imgAspect > boxAspect) {
+    mapW = availW
+    mapH = availW / imgAspect
+  } else {
+    mapH = availH
+    mapW = availH * imgAspect
+  }
   const mapX = (pageW - mapW) / 2
+  const mapYFinal = mapY + (availH - mapH) / 2
 
-  pdf.addImage(imgData, 'PNG', mapX, mapY, mapW, mapH)
+  pdf.addImage(imgData, 'PNG', mapX, mapYFinal, mapW, mapH)
 
   pdf.setDrawColor(255, 255, 255)
   pdf.setLineWidth(0.2)
   pdf.setGState(pdf.GState({ opacity: 0.2 }))
-  pdf.rect(mapX, mapY, mapW, mapH)
+  pdf.rect(mapX, mapYFinal, mapW, mapH)
   pdf.setGState(pdf.GState({ opacity: 1 }))
 
   if (visited.size > 0) {
@@ -113,21 +136,37 @@ export async function exportMapPDF(
     const lineH = 7
     const startY = 32
 
-    pdf.setTextColor(220, 220, 220)
+    pdf.setFont('helvetica', 'normal')
     pdf.setFontSize(9)
 
+    const entriesPerPage = Math.floor((pageH - 15 - startY) / lineH) * cols
+
     names.forEach((name, i) => {
-      const col = i % cols
-      const row = Math.floor(i / cols)
+      const posInPage = i % entriesPerPage
+      const col = posInPage % cols
+      const row = Math.floor(posInPage / cols)
       const x = 20 + col * colW
       const y = startY + row * lineH
 
-      if (y < pageH - 15) {
-        pdf.setFillColor(212, 169, 106)
-        pdf.circle(x + 1.5, y - 1, 1, 'F')
-        pdf.setTextColor(220, 220, 220)
-        pdf.text(name, x + 6, y)
+      if (i > 0 && posInPage === 0) {
+        pdf.addPage('a4', 'landscape')
+        pdf.setFillColor(26, 39, 68)
+        pdf.rect(0, 0, pageW, pageH, 'F')
+        pdf.setFont('helvetica', 'bold')
+        pdf.setFontSize(14)
+        pdf.setTextColor(212, 169, 106)
+        pdf.text('Países visitados en moto', pageW / 2, 16, { align: 'center' })
+        pdf.setFont('helvetica', 'normal')
+        pdf.setFontSize(8)
+        pdf.setTextColor(180, 180, 180)
+        pdf.text(`${visited.size} de ${TOTAL_COUNTRIES} países — ${pct}% del mundo`, pageW / 2, 22, { align: 'center' })
+        pdf.setFontSize(9)
       }
+
+      pdf.setFillColor(212, 169, 106)
+      pdf.circle(x + 1.5, y - 1, 1, 'F')
+      pdf.setTextColor(220, 220, 220)
+      pdf.text(name, x + 6, y)
     })
 
     pdf.setFontSize(8)
